@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VM-tips 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f8fa;min-height:100vh}
+:root{
+  --green:#1a7f4b;--green-light:#e8f5ee;--green-mid:#2da562;
+  --gold:#c8961a;--gold-light:#fdf3dc;
+  --red:#c0392b;--blue:#1565c0;
+  --bg:#f7f8fa;--card:#fff;--border:#e2e5ea;
+  --text:#1a1d23;--muted:#6b7280;
+  --radius:10px;
+}
+.app{max-width:800px;margin:0 auto;padding:12px}
+.header{background:var(--green);color:#fff;border-radius:14px;padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:16px}
+.header-icon{font-size:36px}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-0.3px}
+.header p{font-size:13px;opacity:0.8;margin-top:2px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;background:#fff;border-radius:var(--radius);padding:5px;border:0.5px solid var(--border)}
+.tab{flex:1;padding:8px 4px;border:none;background:transparent;border-radius:7px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.15s}
+.tab.active{background:var(--green);color:#fff}
+.card{background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px 16px;margin-bottom:10px}
+.name-section{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.name-input{flex:1;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:#fff;outline:none}
+.name-input:focus{border-color:var(--green)}
+.btn{padding:9px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:var(--green-mid)}
+.btn-red{background:var(--red);color:#fff}
+.btn-small{padding:5px 11px;font-size:12px;border-radius:6px}
+.btn-outline{background:transparent;border:0.5px solid var(--border);color:var(--muted);cursor:pointer}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+.scoring-info{background:var(--gold-light);border:0.5px solid #e6c84a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7a5c0a;line-height:1.8}
+.admin-info{background:#fdecea;border:0.5px solid #f5a8a8;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7a1a1a;line-height:1.8}
+.locked-banner{background:#f1f0fb;border:0.5px solid #c5c0e8;border-radius:8px;padding:14px 16px;text-align:center;color:#5a5380;font-size:13px;font-weight:500}
+.deadline-chip{display:inline-block;background:var(--green-light);color:var(--green);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;margin-bottom:10px}
+.deadline-chip.soon{background:#fff3cd;color:#7a5c0a}
+.deadline-chip.closed{background:#fdecea;color:var(--red)}
+.tabs-scroll{display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;scrollbar-width:none}
+.tabs-scroll::-webkit-scrollbar{display:none}
+.gtab{padding:5px 11px;border-radius:20px;border:0.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--muted)}
+.gtab.active{background:var(--green);color:#fff;border-color:var(--green)}
+.team-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:14px;color:var(--text);font-weight:500;margin-bottom:5px}
+.place-selects{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.place-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.place-select{width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;outline:none;cursor:pointer}
+.place-select:focus{border-color:var(--green)}
+.place-select.correct{background:#e8f5ee;border-color:var(--green)}
+.place-select.wrong{background:#fdecea;border-color:var(--red)}
+.place-select:disabled{background:var(--bg);color:var(--muted);cursor:not-allowed}
+.ac-wrap{position:relative;flex:1}
+.ko-team{width:100%;padding:7px 10px;border:0.5px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:#fff;outline:none}
+.ko-team:focus{border-color:var(--green)}
+.ko-team.correct{background:#e8f5ee;border-color:var(--green)}
+.ko-team.wrong{background:#fdecea;border-color:var(--red)}
+.ko-team:disabled{background:var(--bg);color:var(--muted);cursor:not-allowed}
+.ac-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;max-height:200px;overflow-y:auto;margin-top:2px;display:none}
+.ac-item{padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;gap:8px}
+.ac-item:hover{background:var(--green-light)}
+.ko-match{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.knockout-stage{margin-bottom:14px}
+.ko-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px}
+.special-card{background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);border-left-width:3px;padding:12px 14px;margin-bottom:8px}
+.special-label{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:5px}
+.special-pts{font-size:11px;font-weight:700;color:var(--green);float:right}
+.special-input{padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);background:#fff;outline:none;width:100%}
+.special-input:focus{border-color:var(--gold)}
+.special-input.correct{background:#e8f5ee;border-color:var(--green)}
+.special-input.wrong{background:#fdecea;border-color:var(--red)}
+.special-input:disabled{background:var(--bg);color:var(--muted);cursor:not-allowed}
+.lb-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:5px;background:var(--bg)}
+.lb-row.gold-row{background:var(--gold-light);border:0.5px solid #e6c84a}
+.lb-row.me{border:1.5px solid var(--green)}
+.lb-name{flex:1;font-size:14px;font-weight:600;color:var(--text)}
+.lb-pts{font-size:15px;font-weight:700;color:var(--green)}
+.lb-breakdown{font-size:11px;color:var(--muted);margin-top:1px}
+.status-msg{font-size:12px;color:var(--green);margin-top:6px;text-align:right;min-height:16px}
+.user-pill{display:inline-flex;align-items:center;gap:6px;background:var(--green-light);color:var(--green);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:600;margin-bottom:10px}
+.admin-banner{background:#fff3cd;border:0.5px solid #ffc107;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#7a5c0a;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.winner-section{background:var(--gold-light);border:0.5px solid #e6c84a;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.winner-label{font-size:12px;font-weight:600;color:#7a5c0a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+.admin-edit-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--bg);margin-bottom:6px}
+.admin-edit-name{flex:1;font-size:14px;font-weight:600;color:var(--text)}
+.admin-section{margin-bottom:20px}
+.admin-section-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border)}
+.admin-field{margin-bottom:10px}
+.admin-field label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+.admin-field input, .admin-field select{width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;outline:none}
+.admin-field input:focus, .admin-field select:focus{border-color:var(--green)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-icon">⚽</div>
+    <div>
+      <h1>VM-tips 2026</h1>
+      <p>USA · Kanada · Mexiko &nbsp;|&nbsp; 11 juni – 19 juli</p>
+    </div>
+  </div>
+  <div id="login-section" class="card"><div class="loading">Laddar...</div></div>
+  <div id="main-app" style="display:none">
+    <div id="user-banner"></div>
+    <div id="admin-banner-wrap"></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('groups',this)">Grupper</button>
+      <button class="tab" onclick="switchTab('knockout',this)">Slutspel</button>
+      <button class="tab" onclick="switchTab('special',this)">Övrigt</button>
+      <button class="tab" onclick="switchTab('leaderboard',this)">Tabell</button>
+      <button class="tab" id="admin-tab" style="display:none" onclick="switchTab('adminedit',this)">✏️ Hantera</button>
+    </div>
+    <div id="tab-content"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, get, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAen_6bW86zmKV5p3Il0-Lplxaa_DMKUPk",
+  authDomain: "vmtips-2026-7a060.firebaseapp.com",
+  databaseURL: "https://vmtips-2026-7a060-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "vmtips-2026-7a060",
+  storageBucket: "vmtips-2026-7a060.firebasestorage.app",
+  messagingSenderId: "711729356981",
+  appId: "1:711729356981:web:35d8165684d7da5028defc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── Deadlines ──────────────────────────────────────────────────────────────
+const DEADLINE_GROUPS   = new Date('2026-06-16T18:00:00+02:00');
+const DEADLINE_KNOCKOUT = new Date('2026-06-28T18:00:00+02:00');
+function groupsLocked(){return new Date()>DEADLINE_GROUPS;}
+function knockoutLocked(){return new Date()>DEADLINE_KNOCKOUT;}
+function daysUntil(d){return Math.ceil((d-new Date())/(1000*60*60*24));}
+function deadlineChip(deadline,label){
+  const d=daysUntil(deadline);
+  if(d<0) return `<span class="deadline-chip closed">🔒 Stängt sedan ${label}</span>`;
+  if(d<=3) return `<span class="deadline-chip soon">⏰ Stänger ${label} (${d} dag${d===1?'':'ar'} kvar)</span>`;
+  return `<span class="deadline-chip">📅 Öppet till ${label}</span>`;
+}
+
+// ── Flaggor ────────────────────────────────────────────────────────────────
+const FLAGS={
+  'Mexiko':'🇲🇽','Sydkorea':'🇰🇷','Tjeckien':'🇨🇿','Sydafrika':'🇿🇦',
+  'Bosnien & Hercegovina':'🇧🇦','Schweiz':'🇨🇭','Kanada':'🇨🇦','Qatar':'🇶🇦',
+  'Skottland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Brasilien':'🇧🇷','Marocko':'🇲🇦','Haiti':'🇭🇹',
+  'USA':'🇺🇸','Australien':'🇦🇺','Turkiet':'🇹🇷','Paraguay':'🇵🇾',
+  'Curaçao':'🇨🇼','Ecuador':'🇪🇨','Elfenbenskusten':'🇨🇮','Tyskland':'🇩🇪',
+  'Japan':'🇯🇵','Nederländerna':'🇳🇱','Sverige':'🇸🇪','Tunisien':'🇹🇳',
+  'Belgien':'🇧🇪','Egypten':'🇪🇬','Iran':'🇮🇷','Nya Zeeland':'🇳🇿',
+  'Kap Verde':'🇨🇻','Saudiarabien':'🇸🇦','Spanien':'🇪🇸','Uruguay':'🇺🇾',
+  'Frankrike':'🇫🇷','Irak':'🇮🇶','Norge':'🇳🇴','Senegal':'🇸🇳',
+  'Algeriet':'🇩🇿','Argentina':'🇦🇷','Jordanien':'🇯🇴','Österrike':'🇦🇹',
+  'Colombia':'🇨🇴','Kongo-Kinshasa':'🇨🇩','Portugal':'🇵🇹','Uzbekistan':'🇺🇿',
+  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Ghana':'🇬🇭','Kroatien':'🇭🇷','Panama':'🇵🇦'
+};
+function flag(name){return FLAGS[name]||'🏳️';}
+function flagName(name){return name?`${flag(name)} ${name}`:'';}
+
+// ── Lag ────────────────────────────────────────────────────────────────────
+const GROUPS={
+  A:['Mexiko','Sydkorea','Tjeckien','Sydafrika'],
+  B:['Bosnien & Hercegovina','Schweiz','Kanada','Qatar'],
+  C:['Skottland','Brasilien','Marocko','Haiti'],
+  D:['USA','Australien','Turkiet','Paraguay'],
+  E:['Curaçao','Ecuador','Elfenbenskusten','Tyskland'],
+  F:['Japan','Nederländerna','Sverige','Tunisien'],
+  G:['Belgien','Egypten','Iran','Nya Zeeland'],
+  H:['Kap Verde','Saudiarabien','Spanien','Uruguay'],
+  I:['Frankrike','Irak','Norge','Senegal'],
+  J:['Algeriet','Argentina','Jordanien','Österrike'],
+  K:['Colombia','Kongo-Kinshasa','Portugal','Uzbekistan'],
+  L:['England','Ghana','Kroatien','Panama']
+};
+const ALL_TEAMS=Object.values(GROUPS).flat();
+
+function getActiveTeams(){
+  const advanced=new Set();
+  Object.values(sharedData.results?.groups||{}).forEach(g=>{
+    if(g.first) advanced.add(g.first);
+    if(g.second) advanced.add(g.second);
+  });
+  Object.values(sharedData.results?.ko||{}).forEach(v=>{if(v)advanced.add(v);});
+  if(advanced.size===0) return ALL_TEAMS;
+  return [...advanced];
+}
+
+const KO_ROUNDS=[
+  {key:'r32', label:'Omgång 32',         count:16, pts:1},
+  {key:'r16', label:'Åttondelsfinaler',  count:8,  pts:2},
+  {key:'qf',  label:'Kvartsfinaler',     count:4,  pts:3},
+  {key:'sf',  label:'Semefinaler',       count:2,  pts:4},
+  {key:'win', label:'Turneringsvinnare', count:1,  pts:6, isWinner:true},
+];
+
+const SPECIAL_FIELDS=[
+  {key:'winner',          label:'Turneringsvinnare (bonusfråga)', placeholder:'Vilket land vinner VM?',            color:'var(--gold)',  pts:15, isBonus:true, bonusLabel:'Rätt svar = 15p — men bara om du svarar innan 16 juni kl 18:00!'},
+  {key:'top_scorer',      label:'Skyttekung',                     placeholder:'Spelarnamn…',                       color:'var(--green)', pts:8},
+  {key:'sweden',          label:'Hur långt tar sig Sverige?',     placeholder:'T.ex. Kvartsfinal, Semifinal…',     color:'#1565c0',      pts:6},
+  {key:'golden_ball',     label:'Bästa spelare (Golden Ball)',    placeholder:'Spelarnamn…',                       color:'var(--gold)',  pts:5},
+  {key:'red_cards',       label:'Mest röda kort (lag)',           placeholder:'Vilket lag får flest röda kort?',   color:'var(--red)',   pts:4},
+  {key:'best_keeper',     label:'Bästa målvakt / minst insläppta',placeholder:'Spelarnamn…',                       color:'#0f6e56',      pts:4},
+  {key:'top_scorer_team', label:'Flest mål totalt (lag)',         placeholder:'Vilket land gör flest mål?',        color:'#8e44ad',      pts:4},
+];
+
+const ADMIN_PW='vm2026admin';
+let currentUser=null, isAdmin=false, activeGroupTab='A';
+
+// Delad data — lyssnar på Firebase i realtid
+let sharedData = { tips:{}, results:{groups:{},ko:{},special:{}}, earlyWinner:{} };
+
+// ── Firebase helpers ───────────────────────────────────────────────────────
+function fbRef(path){ return ref(db, path); }
+
+async function fbGet(path){
+  const snap = await get(fbRef(path));
+  return snap.exists() ? snap.val() : null;
+}
+
+async function fbSet(path, val){
+  await set(fbRef(path), val);
+}
+
+async function fbUpdate(path, val){
+  await update(fbRef(path), val);
+}
+
+// Lyssna på förändringar i realtid
+function listenRealtime(){
+  onValue(fbRef('tips'), snap => {
+    sharedData.tips = snap.exists() ? snap.val() : {};
+    if(document.getElementById('saved-users-wrap')) renderSavedUsers();
+  });
+  onValue(fbRef('results'), snap => {
+    sharedData.results = snap.exists() ? snap.val() : {groups:{},ko:{},special:{}};
+  });
+  onValue(fbRef('earlyWinner'), snap => {
+    sharedData.earlyWinner = snap.exists() ? snap.val() : {};
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function loadAll(){
+  const [t,r,e] = await Promise.all([
+    fbGet('tips'), fbGet('results'), fbGet('earlyWinner')
+  ]);
+  if(t) sharedData.tips=t;
+  if(r) sharedData.results=r;
+  if(e) sharedData.earlyWinner=e;
+  listenRealtime();
+  renderLogin();
+}
+
+function renderLogin(){
+  document.getElementById('login-section').innerHTML=`
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px">Vem tippar?</div>
+    <div class="name-section">
+      <input class="name-input" id="name-input" placeholder="Ditt namn..." maxlength="30" onkeydown="if(event.key==='Enter')window.setUser()" />
+      <button class="btn btn-green" onclick="window.setUser()">Starta</button>
+    </div>
+    <div id="saved-users-wrap"></div>
+    <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Admin (mata in resultat):</div>
+      <div style="display:flex;gap:8px">
+        <input class="name-input" id="admin-pw" type="password" placeholder="Lösenord..." style="max-width:160px" onkeydown="if(event.key==='Enter')window.adminLogin()" />
+        <button class="btn btn-small btn-outline" onclick="window.adminLogin()">Admin-läge</button>
+      </div>
+      <div id="admin-err" style="font-size:11px;color:var(--red);margin-top:4px"></div>
+    </div>`;
+  renderSavedUsers();
+}
+
+function renderSavedUsers(){
+  const wrap=document.getElementById('saved-users-wrap');
+  if(!wrap) return;
+  const names=Object.keys(sharedData.tips).filter(n=>n!=='__admin__');
+  if(!names.length){wrap.innerHTML='';return;}
+  wrap.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:6px;margin-top:10px">Fortsätt tippa:</div>'+
+    names.map(n=>`<button class="btn btn-outline btn-small" style="margin:3px" onclick="window.loginAs('${n}')">${n}</button>`).join('');
+}
+
+window.adminLogin=function(){
+  const pw=document.getElementById('admin-pw').value;
+  if(pw===ADMIN_PW){isAdmin=true;loginAs('__admin__');}
+  else document.getElementById('admin-err').textContent='Fel lösenord';
+};
+
+function loginAs(name){
+  currentUser=name;
+  if(!sharedData.tips[name]) fbSet(`tips/${name}`,{groups:{},ko:{},special:{}});
+  showApp();
+}
+
+window.loginAs=loginAs;
+
+window.setUser=function(){
+  const v=document.getElementById('name-input').value.trim();
+  if(!v) return;
+  loginAs(v);
+};
+
+function showApp(){
+  document.getElementById('login-section').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  if(isAdmin){
+    document.getElementById('user-banner').innerHTML='';
+    document.getElementById('admin-banner-wrap').innerHTML='<div class="admin-banner">🔧 <b>Admin-läge</b> – mata in officiella resultat och hantera tips. <button class="btn btn-small btn-outline" onclick="window.logout()">Logga ut</button></div>';
+    document.getElementById('admin-tab').style.display='flex';
+  } else {
+    document.getElementById('user-banner').innerHTML=`<div class="user-pill">⚽ ${currentUser} <button class="btn btn-outline btn-small" style="margin-left:4px" onclick="window.logout()">Byt</button></div>`;
+    document.getElementById('admin-banner-wrap').innerHTML='';
+    document.getElementById('admin-tab').style.display='none';
+  }
+  switchTab('groups',document.querySelector('.tab.active'));
+}
+
+window.logout=function(){
+  currentUser=null;isAdmin=false;
+  document.getElementById('login-section').style.display='block';
+  document.getElementById('main-app').style.display='none';
+  renderLogin();
+};
+
+function switchTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const c=document.getElementById('tab-content');
+  if(tab==='groups') renderGroups(c);
+  else if(tab==='knockout') renderKnockout(c);
+  else if(tab==='special') renderSpecial(c);
+  else if(tab==='leaderboard') renderLeaderboard(c);
+  else if(tab==='adminedit') renderAdminEdit(c);
+}
+window.switchTab=switchTab;
+
+// ── Autocomplete ───────────────────────────────────────────────────────────
+function makeAutocomplete(inputEl, listEl, teamList){
+  inputEl.addEventListener('input', ()=>{
+    const q=inputEl.value.trim().toLowerCase();
+    if(!q){listEl.style.display='none';return;}
+    const matches=teamList.filter(t=>t.toLowerCase().includes(q));
+    if(!matches.length){listEl.style.display='none';return;}
+    listEl.innerHTML=matches.map(t=>`<div class="ac-item" onmousedown="event.preventDefault()" onclick="window.acPick(this,'${t.replace(/'/g,"\\'").replace(/&/g,'&amp;')}')">${flag(t)} ${t}</div>`).join('');
+    listEl.style.display='block';
+  });
+  inputEl.addEventListener('blur',()=>setTimeout(()=>{listEl.style.display='none';},150));
+}
+
+window.acPick=function(el,val){
+  const wrap=el.closest('.ac-wrap');
+  const input=wrap.querySelector('.ko-team');
+  const list=wrap.querySelector('.ac-list');
+  input.value=flagName(val);
+  input.dataset.val=val;
+  list.style.display='none';
+  const key=input.dataset.key;
+  saveKO(key,val);
+};
+
+// ── Gruppspel ──────────────────────────────────────────────────────────────
+function calcGroupPts(g,tip,res){
+  if(!res||(!res.first&&!res.second)) return{pts:0,firstCls:'',secondCls:''};
+  let pts=0;
+  const tf=tip?.first||'',ts=tip?.second||'',rf=res.first||'',rs=res.second||'';
+  const tfThru=tf&&(tf===rf||tf===rs), tsThru=ts&&(ts===rf||ts===rs);
+  if(tfThru) pts+=1;
+  if(tsThru) pts+=1;
+  if(tf&&rf&&tf===rf) pts+=1;
+  return{pts, firstCls:rf?(tf===rf?'correct':tfThru?'correct':'wrong'):'', secondCls:rs?(ts===rs?'correct':tsThru?'correct':'wrong'):''};
+}
+
+function renderGroups(c){
+  const locked=groupsLocked()&&!isAdmin;
+  const gtabs=Object.keys(GROUPS).map(g=>`<button class="gtab ${g===activeGroupTab?'active':''}" onclick="window.setGroupTab('${g}',this)">${g}</button>`).join('');
+  c.innerHTML=`<div class="card">
+    ${isAdmin?'<div class="admin-info"><b>Admin:</b> Välj gruppvinnare och tvåa för varje grupp.</div>':deadlineChip(DEADLINE_GROUPS,'16 juni')}
+    ${locked?'<div class="locked-banner">🔒 Grupptipsen är låsta</div>':'<div class="scoring-info" style="margin-top:8px"><b>Poäng per grupp:</b> 1p per lag du gissat går vidare (max 2p) &nbsp;·&nbsp; +1p om du gissat rätt vinnare</div>'}
+    <div class="tabs-scroll" style="margin-top:10px">${gtabs}</div>
+    <div id="group-body"></div>
+    <div class="status-msg" id="status-g"></div>
+  </div>`;
+  renderGroupBody(activeGroupTab);
+}
+
+function renderGroupBody(g){
+  const locked=groupsLocked()&&!isAdmin;
+  const teams=GROUPS[g];
+  const tipData=isAdmin?sharedData.results.groups:(sharedData.tips[currentUser]?.groups||{});
+  const saved=tipData[g]||{first:'',second:''};
+  const res=(sharedData.results?.groups||{})[g]||{};
+  const sc=!isAdmin?calcGroupPts(g,saved,res):{pts:0,firstCls:'',secondCls:''};
+  const ptsLabel=(!isAdmin&&(res.first||res.second))?`<span style="font-size:12px;font-weight:700;color:var(--green);margin-left:8px">+${sc.pts}p</span>`:'';
+  const teamList=teams.map(t=>`<div class="team-row"><span>${flag(t)}</span><span>${t}</span></div>`).join('');
+  function sel(posKey,label,cls){
+    const val=saved[posKey]||'';
+    const opts=`<option value="">Välj lag…</option>`+teams.map(t=>`<option value="${t}" ${val===t?'selected':''}>${flag(t)} ${t}</option>`).join('');
+    return `<div><div class="place-label">${label}</div><select class="place-select ${cls}" ${locked?'disabled':''} onchange="window.saveGroupPlace('${g}','${posKey}',this.value)">${opts}</select></div>`;
+  }
+  document.getElementById('group-body').innerHTML=`
+    <div style="margin-bottom:12px">${teamList}</div>
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--text)">Ditt tips ${ptsLabel}</div>
+    <div class="place-selects">${sel('first','🥇 Vinnare',sc.firstCls)}${sel('second','🥈 Tvåa',sc.secondCls)}</div>`;
+}
+
+window.setGroupTab=function(g,el){
+  activeGroupTab=g;
+  document.querySelectorAll('.gtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderGroupBody(g);
+};
+
+window.saveGroupPlace=async function(g,pos,val){
+  if(groupsLocked()&&!isAdmin) return;
+  if(isAdmin){
+    await fbUpdate(`results/groups/${g}`,{[pos]:val});
+  } else {
+    await fbUpdate(`tips/${currentUser}/groups/${g}`,{[pos]:val});
+  }
+  renderGroupBody(g);
+  showStatus('status-g');
+};
+
+// ── Slutspel ───────────────────────────────────────────────────────────────
+function renderKnockout(c){
+  const locked=knockoutLocked()&&!isAdmin;
+  const tipData=isAdmin?sharedData.results.ko:(sharedData.tips[currentUser]?.ko||{});
+  const activeTeams=getActiveTeams();
+
+  const rounds=KO_ROUNDS.map(r=>{
+    const inputs=Array.from({length:r.count},(_,i)=>{
+      const key=`${r.key}_${i}`;
+      const val=tipData[key]||'';
+      const res=(sharedData.results?.ko||{})[key]||'';
+      let cls=(!isAdmin&&res)?(val.toLowerCase()===res.toLowerCase()?'correct':'wrong'):'';
+      const ptsLabel=(!isAdmin&&cls==='correct')?`<span style="font-size:11px;font-weight:700;color:var(--green)">+${r.pts}p</span>`:'';
+      if(locked){
+        return `<div class="ko-match"><input class="ko-team ${cls}" type="text" value="${flagName(val)}" disabled />${ptsLabel}</div>`;
+      }
+      const listId=`ac_${key.replace(/[^a-z0-9]/gi,'_')}`;
+      return `<div class="ko-match">
+        <div class="ac-wrap">
+          <input class="ko-team ${cls}" type="text" placeholder="Börja skriva…" value="${flagName(val)}" data-key="${key}" data-val="${val}" autocomplete="off" id="inp_${listId}" />
+          <div class="ac-list" id="${listId}"></div>
+        </div>
+        ${ptsLabel}
+      </div>`;
+    }).join('');
+    const note=r.isWinner?'(6p — vem vinner finalen?)':`(${r.pts}p/rätt)`;
+    const wrap=r.isWinner?'winner-section':'knockout-stage';
+    const lbl=r.isWinner?'winner-label':'ko-label';
+    return `<div class="${wrap}"><div class="${lbl}">${r.label} <span style="font-weight:400;font-size:11px">${note}</span></div>${inputs}</div>`;
+  }).join('');
+
+  c.innerHTML=`<div class="card">
+    ${isAdmin?'<div class="admin-info"><b>Admin:</b> Mata in lagen som gick vidare per omgång samt turneringsvinnaren.</div>':deadlineChip(DEADLINE_KNOCKOUT,'28 juni')}
+    ${locked?'<div class="locked-banner" style="margin-top:8px">🔒 Slutspelstipsen är låsta</div>':'<div class="scoring-info" style="margin-top:8px"><b>Poäng:</b> Omg.32=1p · Åttondel=2p · Kvart=3p · Semi=4p · Turneringsvinnare=6p</div>'}
+    <div style="margin-top:12px">${rounds}</div>
+    <div class="status-msg" id="status-ko"></div>
+  </div>`;
+
+  if(!locked){
+    KO_ROUNDS.forEach(r=>{
+      for(let i=0;i<r.count;i++){
+        const key=`${r.key}_${i}`;
+        const listId=`ac_${key.replace(/[^a-z0-9]/gi,'_')}`;
+        const inputEl=document.getElementById(`inp_${listId}`);
+        const listEl=document.getElementById(listId);
+        if(inputEl&&listEl) makeAutocomplete(inputEl,listEl,activeTeams);
+      }
+    });
+  }
+}
+
+async function saveKO(key,val){
+  if(knockoutLocked()&&!isAdmin) return;
+  if(isAdmin){
+    await fbSet(`results/ko/${key}`,val);
+  } else {
+    await fbSet(`tips/${currentUser}/ko/${key}`,val);
+  }
+  showStatus('status-ko');
+}
+window.saveKO=saveKO;
+
+// ── Övrigt ─────────────────────────────────────────────────────────────────
+function renderSpecial(c){
+  const locked=groupsLocked()&&!isAdmin;
+  const tipData=isAdmin?sharedData.results.special:(sharedData.tips[currentUser]?.special||{});
+  const rows=SPECIAL_FIELDS.map(f=>{
+    const val=tipData[f.key]||'',res=(sharedData.results?.special||{})[f.key]||'';
+    let cls='',ptsEarned=0;
+    if(!isAdmin&&res){
+      if(val.trim().toLowerCase()===res.trim().toLowerCase()){cls='correct';ptsEarned=f.pts;}
+      else cls='wrong';
+    }
+    const ptsLabel=!isAdmin
+      ?`<span class="special-pts">${res&&cls==='correct'?'+'+ptsEarned+'p':f.pts+'p'}</span>`
+      :`<span class="special-pts">${f.pts}p</span>`;
+    const bonusNote=f.isBonus&&!isAdmin?`<div style="font-size:11px;color:var(--gold);margin-top:2px;line-height:1.5">${f.bonusLabel}</div>`:'';
+    return `<div class="special-card" style="border-left-color:${f.color}">
+      <div class="special-label">${f.label} ${ptsLabel}</div>
+      ${bonusNote}
+      <input class="special-input ${cls}" style="margin-top:6px" type="text" placeholder="${f.placeholder}" value="${val}" ${locked?'disabled':''} onchange="window.saveSpecial('${f.key}',this.value)" />
+    </div>`;
+  }).join('');
+  c.innerHTML=`<div>
+    ${isAdmin?'<div class="admin-info"><b>Admin:</b> Mata in officiella svar.</div>':deadlineChip(DEADLINE_GROUPS,'16 juni')}
+    ${locked?'<div class="locked-banner" style="margin-top:8px;margin-bottom:12px">🔒 Övrigt-tipsen är låsta</div>':'<div class="scoring-info" style="margin-top:8px">Svara på alla frågor innan <b>16 juni kl 18:00</b>. Turneringsvinnaren är en bonusfråga — rätt svar ger 15p!</div>'}
+    <div style="margin-top:4px">${rows}</div>
+    <div class="status-msg" id="status-sp"></div>
+  </div>`;
+}
+
+window.saveSpecial=async function(key,val){
+  if(groupsLocked()&&!isAdmin) return;
+  if(isAdmin){
+    await fbSet(`results/special/${key}`,val);
+  } else {
+    await fbSet(`tips/${currentUser}/special/${key}`,val);
+    if(key==='winner'&&!groupsLocked()){
+      await fbSet(`earlyWinner/${currentUser}`,true);
+    }
+  }
+  showStatus('status-sp');
+};
+
+// ── Admin: hantera tips ────────────────────────────────────────────────────
+function renderAdminEdit(c){
+  const names=Object.keys(sharedData.tips).filter(n=>n!=='__admin__');
+  const userBtns=names.map(n=>`<button class="btn btn-outline btn-small" style="margin:3px" onclick="window.editUser('${n}')">${n}</button>`).join('');
+  c.innerHTML=`<div class="card">
+    <div class="admin-info"><b>Admin:</b> Välj en person att redigera, eller lägg till en ny.</div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Befintliga tippare:</div>
+      ${userBtns||'<div style="color:var(--muted);font-size:13px">Inga tippare ännu</div>'}
+    </div>
+    <div style="border-top:0.5px solid var(--border);padding-top:12px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">Lägg till ny person:</div>
+      <div style="display:flex;gap:8px">
+        <input class="name-input" id="new-user-name" placeholder="Namn..." maxlength="30" />
+        <button class="btn btn-green" onclick="window.addNewUser()">Lägg till</button>
+      </div>
+    </div>
+    <div id="edit-form" style="margin-top:16px"></div>
+  </div>`;
+}
+
+window.editUser=async function(name){
+  const tip=sharedData.tips[name]||{groups:{},ko:{},special:{}};
+  const groupRows=Object.keys(GROUPS).map(g=>{
+    const saved=tip.groups?.[g]||{};
+    const opts=(pos)=>`<option value="">–</option>`+GROUPS[g].map(t=>`<option value="${t}" ${saved[pos]===t?'selected':''}>${flag(t)} ${t}</option>`).join('');
+    return `<div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px">Grupp ${g}</div>
+      <div class="place-selects">
+        <div><div class="place-label">🥇 Vinnare</div><select class="place-select" onchange="window.adminSaveTip('${name}','groups/${g}/first',this.value)">${opts('first')}</select></div>
+        <div><div class="place-label">🥈 Tvåa</div><select class="place-select" onchange="window.adminSaveTip('${name}','groups/${g}/second',this.value)">${opts('second')}</select></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const specialRows=SPECIAL_FIELDS.map(f=>`<div class="admin-field">
+    <label>${f.label} (${f.pts}p)</label>
+    <input type="text" placeholder="${f.placeholder}" value="${tip.special?.[f.key]||''}" onchange="window.adminSaveTip('${name}','special/${f.key}',this.value)" />
+  </div>`).join('');
+
+  document.getElementById('edit-form').innerHTML=`
+    <div style="border-top:0.5px solid var(--border);padding-top:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">✏️ Redigerar: ${name}</div>
+      <div class="admin-section">
+        <div class="admin-section-title">Gruppspel</div>
+        ${groupRows}
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">Övrigt</div>
+        ${specialRows}
+      </div>
+      <div class="status-msg" id="status-edit"></div>
+    </div>`;
+};
+
+window.adminSaveTip=async function(user,path,val){
+  await fbSet(`tips/${user}/${path}`,val);
+  showStatus('status-edit');
+};
+
+window.addNewUser=async function(){
+  const name=document.getElementById('new-user-name').value.trim();
+  if(!name) return;
+  await fbSet(`tips/${name}`,{groups:{},ko:{},special:{}});
+  document.getElementById('new-user-name').value='';
+  renderAdminEdit(document.getElementById('tab-content'));
+  setTimeout(()=>window.editUser(name),100);
+};
+
+// ── Poängtabell ────────────────────────────────────────────────────────────
+function calcTotalScore(user){
+  const tip=sharedData.tips[user]||{};
+  let groupPts=0,koPts=0,specialPts=0;
+  Object.keys(GROUPS).forEach(g=>{
+    groupPts+=calcGroupPts(g,tip.groups?.[g]||{},(sharedData.results?.groups||{})[g]||{}).pts;
+  });
+  KO_ROUNDS.forEach(r=>{
+    for(let i=0;i<r.count;i++){
+      const key=`${r.key}_${i}`;
+      const tv=(tip.ko?.[key]||'').toLowerCase();
+      const rv=((sharedData.results?.ko||{})[key]||'').toLowerCase();
+      if(rv&&tv===rv) koPts+=r.pts;
+    }
+  });
+  SPECIAL_FIELDS.forEach(f=>{
+    const tv=(tip.special?.[f.key]||'').toLowerCase();
+    const rv=((sharedData.results?.special||{})[f.key]||'').toLowerCase();
+    if(rv&&tv===rv) specialPts+=f.pts;
+  });
+  return{groupPts,koPts,specialPts,total:groupPts+koPts+specialPts};
+}
+
+function renderLeaderboard(c){
+  const names=Object.keys(sharedData.tips).filter(n=>n!=='__admin__');
+  if(!names.length){c.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted);font-size:14px">Inga tippare ännu.</div>';return;}
+  const hasResults=Object.keys(sharedData.results?.groups||{}).length>0||Object.keys(sharedData.results?.ko||{}).length>0||Object.keys(sharedData.results?.special||{}).length>0;
+  const scored=names.map(n=>({name:n,...calcTotalScore(n)})).sort((a,b)=>b.total-a.total);
+  const medals=['🥇','🥈','🥉'];
+  const rows=scored.map((s,i)=>`<div class="lb-row ${i===0?'gold-row':''} ${s.name===currentUser?'me':''}">
+    <span style="font-size:15px;width:26px;text-align:center">${medals[i]||`${i+1}.`}</span>
+    <div style="flex:1">
+      <div class="lb-name">${s.name}${s.name===currentUser?' (du)':''}</div>
+      <div class="lb-breakdown">Grupper: ${s.groupPts}p · Slutspel: ${s.koPts}p · Övrigt: ${s.specialPts}p</div>
+    </div>
+    <span class="lb-pts">${s.total}p</span>
+  </div>`).join('');
+  c.innerHTML=`<div>
+    ${!hasResults?'<div class="scoring-info" style="margin-bottom:12px">Inga resultat inmatade ännu – uppdateras automatiskt när admin matar in resultat.</div>':''}
+    ${rows}
+  </div>`;
+}
+
+function showStatus(id){
+  const s=document.getElementById(id);
+  if(s){s.textContent='Sparar…';setTimeout(()=>{if(s)s.textContent='Sparat ✓';setTimeout(()=>{if(s)s.textContent=''},2000)},500);}
+}
+
+loadAll();
+</script>
+</body>
+</html>
